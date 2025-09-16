@@ -15,6 +15,7 @@ public struct ContactInfo
     public string Gender;
     public string id;
     public float height;
+    public float width;
 }
 
 public class RecyclableScrollerDemo : MonoBehaviour, IRecyclableScrollRectDataSource
@@ -47,7 +48,8 @@ public class RecyclableScrollerDemo : MonoBehaviour, IRecyclableScrollRectDataSo
             obj.Name = i + "_Name";
             obj.Gender = genders[Random.Range(0, 2)];
             obj.id = "item : " + i;
-            obj.height = Random.Range(100f, 300f);
+            obj.height = Random.Range(100f, 100f);
+            obj.width = Random.Range(100f, 300f);
             _contactList.Add(obj);
         }
     }
@@ -81,6 +83,16 @@ public class RecyclableScrollerDemo : MonoBehaviour, IRecyclableScrollRectDataSo
         }
         
         return _contactList[index].height;
+    }
+    
+    public float GetWidth(int index)
+    {
+        if (index >= _contactList.Count)
+        {
+            return 0f;
+        }
+        
+        return _contactList[index].width;
     }
 
     #endregion

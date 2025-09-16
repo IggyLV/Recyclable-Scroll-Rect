@@ -5,7 +5,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 
 namespace PolyAndCode.UI
@@ -40,6 +39,8 @@ namespace PolyAndCode.UI
 
 		//Cached zero vector 
 		private readonly Vector2 _zeroVector = Vector2.zero;
+		
+		private float _virtualTop;
 
 		#region INIT
 
@@ -54,7 +55,7 @@ namespace PolyAndCode.UI
 			_coloumns = isGrid ? columns : 1;
 			_recyclableViewBounds = new Bounds();
 		}
-
+		
 		/// <summary>
 		/// Coroutine for initialization.
 		/// Using coroutine for init because few UI stuff requires a frame to update
@@ -70,6 +71,11 @@ namespace PolyAndCode.UI
 
 			//Cell Poool
 			CreateCellPool();
+			
+			float windowH = RecalculateWindowHeight();
+			Content.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, windowH);
+			_virtualTop = 0f; // we start at the very top of the dataset
+			
 			_currentItemCount = _cellPool.Count;
 			_topMostCellIndex = 0;
 			_bottomMostCellIndex = _cellPool.Count - 1;
@@ -233,97 +239,48 @@ namespace PolyAndCode.UI
 		private Vector2 RecycleTopToBottom()
 		{
 			_recycling = true;
-
-			int n = 0;
-			float posY = IsGrid ? _cellPool[_bottomMostCellIndex].anchoredPosition.y : 0;
-			float posX = 0;
-
-			//to determine if content size needs to be updated
-			int additionalRows = 0;
-			float additionalHeight = 0f;
 			float moveOffset = 0f;
-			//Recycle until cell at Top is avaiable and current item count smaller than datasource
+
 			while (_cellPool[_topMostCellIndex].MinY() > _recyclableViewBounds.max.y &&
 					_currentItemCount < DataSource.GetItemCount())
 			{
-				//Cell for row at
-				DataSource.SetCell(_cachedCells[_topMostCellIndex], _currentItemCount);
-				
-				if (IsGrid)
-				{
-					if (++_bottomMostCellColumn >= _coloumns)
-					{
-						n++;
-						_bottomMostCellColumn = 0;
-						posY = _cellPool[_bottomMostCellIndex].anchoredPosition.y -
-								DataSource.GetHeight(_bottomMostCellIndex);
-						additionalRows++;
-						additionalHeight += DataSource.GetHeight(_bottomMostCellIndex);
-					}
+				var top = _cellPool[_topMostCellIndex];
+				var bottom = _cellPool[_bottomMostCellIndex];
 
-					//Move top cell to bottom
-					posX = _bottomMostCellColumn * _cellWidth;
-					_cellPool[_topMostCellIndex].anchoredPosition = new Vector2(posX, posY);
+				// amount leaving the top of the window
+				float offHeight = top.sizeDelta.y;
+				_virtualTop += offHeight;          // << key: virtual scroll advanced
+				moveOffset += offHeight;           // compensate to keep visuals stable
 
-					if (++_topMostCellColumn >= _coloumns)
-					{
-						additionalHeight -= DataSource.GetHeight(_topMostCellIndex);
-						_topMostCellColumn = 0;
-						additionalRows--;
-					}
-				}
-				else
-				{
-					//Move top cell to bottom
-					posY = _cellPool[_bottomMostCellIndex].anchoredPosition.y -
-							_cellPool[_bottomMostCellIndex].sizeDelta.y;
-					_cellPool[_topMostCellIndex].anchoredPosition =
-						new Vector2(_cellPool[_topMostCellIndex].anchoredPosition.x, posY);
+				int newDataIndex = _currentItemCount;
+				float newHeight = DataSource.GetHeight(newDataIndex);
 
-					moveOffset += _cellPool[_bottomMostCellIndex].sizeDelta.y;
-				}
-				
-				//set new indices
+				// bind first, then size
+				DataSource.SetCell(_cachedCells[_topMostCellIndex], newDataIndex);
+				top.sizeDelta = new Vector2(top.sizeDelta.x, newHeight);
+
+				// place below the current bottom
+				float posY = bottom.anchoredPosition.y - bottom.sizeDelta.y;
+				top.anchoredPosition = new Vector2(top.anchoredPosition.x, posY);
+
+				// rotate indices
 				_bottomMostCellIndex = _topMostCellIndex;
 				_topMostCellIndex = (_topMostCellIndex + 1) % _cellPool.Count;
-
 				_currentItemCount++;
-				if (IsGrid == false)
-					n++;
 			}
 
-			//Content size adjustment 
-			if (IsGrid)
+			// window height is ALWAYS sum of pool
+			Content.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, RecalculateWindowHeight());
+
+			if (moveOffset > 0f)
 			{
-				Content.sizeDelta += additionalHeight * Vector2.up;
-				//TODO : check if it is supposed to be done only when > 0
-				if (additionalRows > 0)
-				{
-					n -= additionalRows;
-				}
+				// keep visuals stable
+				_cellPool.ForEach(cell => cell.anchoredPosition += moveOffset * Vector2.up);
+				Content.anchoredPosition -= moveOffset * Vector2.up;
 			}
 
-			//TODO-IB: Recalculate cell heights!!!
-			//Need to get value to offset all cell anchored positions
-			//Content anchor position adjustment.
-
-			// float offset = 0f;
-			// for (int i = _bottomMostCellIndex; i < _bottomMostCellIndex + n; i++)
-			// {
-			// 	offset += _cellPool[i].sizeDelta.y;
-			// }
-			
-			Debug.LogError($"Offset: {moveOffset}");
-			Debug.LogError($"n: {n}");
-			_cellPool.ForEach(cell =>
-				cell.anchoredPosition += moveOffset * Vector2.up);
-			
-			// _cellPool.ForEach(cell =>
-			// 	cell.anchoredPosition += n * Vector2.up * _cellPool[_topMostCellIndex].sizeDelta.y);
-			
-			Content.anchoredPosition -= moveOffset * Vector2.up;
 			_recycling = false;
-			return -new Vector2(0, moveOffset);
+			return moveOffset > 0f ? -new Vector2(0, moveOffset) : _zeroVector;
 		}
 
 		/// <summary>
@@ -332,76 +289,54 @@ namespace PolyAndCode.UI
 		private Vector2 RecycleBottomToTop()
 		{
 			_recycling = true;
-
-			int n = 0;
-			float posY = IsGrid ? _cellPool[_topMostCellIndex].anchoredPosition.y : 0;
-			float posX = 0;
-
-			//to determine if content size needs to be updated
-			int additionalRows = 0;
-			float additionalHeight = 0f;
 			float moveOffset = 0f;
-			//Recycle until cell at bottom is avaiable and current item count is greater than cellpool size
+
 			while (_cellPool[_bottomMostCellIndex].MaxY() < _recyclableViewBounds.min.y &&
 					_currentItemCount > _cellPool.Count)
 			{
+				var bottom = _cellPool[_bottomMostCellIndex];
+				var top = _cellPool[_topMostCellIndex];
+
 				_currentItemCount--;
+				int newDataIndex = _currentItemCount - _cellPool.Count;
+				float newHeight = DataSource.GetHeight(newDataIndex);
 
-				//Cell for row at
-				DataSource.SetCell(_cachedCells[_bottomMostCellIndex], _currentItemCount - _cellPool.Count);
-				
-				if (IsGrid)
-				{
-					if (--_topMostCellColumn < 0)
-					{
-						n++;
-						_topMostCellColumn = _coloumns - 1;
-						posY = _cellPool[_topMostCellIndex].anchoredPosition.y + DataSource.GetHeight(_topMostCellIndex);
-						additionalRows++;
-						additionalHeight += DataSource.GetHeight(_topMostCellIndex);
-					}
+				DataSource.SetCell(_cachedCells[_bottomMostCellIndex], newDataIndex);
+				bottom.sizeDelta = new Vector2(bottom.sizeDelta.x, newHeight);
 
-					//Move bottom cell to top
-					posX = _topMostCellColumn * _cellWidth;
-					_cellPool[_bottomMostCellIndex].anchoredPosition = new Vector2(posX, posY);
+				// this much appears at the top of the window
+				_virtualTop -= newHeight;          // << key: virtual scroll moved up
+				moveOffset += newHeight;
 
-					if (--_bottomMostCellColumn < 0)
-					{
-						_bottomMostCellColumn = _coloumns - 1;
-						additionalRows--;
-					}
-				}
-				else
-				{
-					//Move bottom cell to top
-					moveOffset += _cellPool[_topMostCellIndex].sizeDelta.y;
-					posY = _cellPool[_topMostCellIndex].anchoredPosition.y + _cellPool[_bottomMostCellIndex].sizeDelta.y;
-					_cellPool[_bottomMostCellIndex].anchoredPosition =
-						new Vector2(_cellPool[_bottomMostCellIndex].anchoredPosition.x, posY);
-					n++;
-				}
-				
+				// place just above current top
+				float posY = top.anchoredPosition.y + newHeight;
+				bottom.anchoredPosition = new Vector2(bottom.anchoredPosition.x, posY);
 
-				//set new indices
+				// rotate indices
 				_topMostCellIndex = _bottomMostCellIndex;
 				_bottomMostCellIndex = (_bottomMostCellIndex - 1 + _cellPool.Count) % _cellPool.Count;
 			}
 
-			if (IsGrid)
+			Content.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, RecalculateWindowHeight());
+
+			if (moveOffset > 0f)
 			{
-			    Content.sizeDelta += additionalHeight * Vector2.up;
-			    //TODOL : check if it is supposed to be done only when > 0
-			    if (additionalRows > 0)
-			    {
-			        n -= additionalRows;
-			    }
+				_cellPool.ForEach(cell => cell.anchoredPosition -= moveOffset * Vector2.up);
+				Content.anchoredPosition += moveOffset * Vector2.up;
 			}
 
-			_cellPool.ForEach((RectTransform cell) =>
-				cell.anchoredPosition -= moveOffset * Vector2.up);
-			Content.anchoredPosition += moveOffset * Vector2.up;
 			_recycling = false;
-			return new Vector2(0, moveOffset);
+			return moveOffset > 0f ? new Vector2(0, moveOffset) : _zeroVector;
+		}
+		
+		private float RecalculateWindowHeight()
+		{
+			float h = 0f;
+			foreach (RectTransform cell in _cellPool)
+			{
+				h += cell.sizeDelta.y;
+			}
+			return h;
 		}
 
 		#endregion

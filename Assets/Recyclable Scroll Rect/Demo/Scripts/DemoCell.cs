@@ -42,7 +42,7 @@ public class DemoCell : MonoBehaviour, ICell
         heightLabel.text = $"{contactInfo.height}px";
 
         Vector2 sizeDelta = ((RectTransform)transform).sizeDelta;
-        ((RectTransform)transform).sizeDelta = new Vector2(sizeDelta.x, contactInfo.height);
+        ((RectTransform)transform).sizeDelta = new Vector2(contactInfo.width, contactInfo.height);
     }
 
     

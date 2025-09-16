@@ -14,5 +14,7 @@ namespace PolyAndCode.UI
         void SetCell(ICell cell, int index);
 
         float GetHeight(int index);
+        
+        float GetWidth(int index);
     }
 }
