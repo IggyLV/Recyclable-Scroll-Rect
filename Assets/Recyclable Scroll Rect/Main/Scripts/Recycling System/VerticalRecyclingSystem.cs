@@ -40,12 +40,24 @@ namespace PolyAndCode.UI
 		//Cached zero vector 
 		private readonly Vector2 _zeroVector = Vector2.zero;
 		
-		private float _virtualTop;
-
+		private float _virtualTop; //in case we'll need scroll bar
+		private readonly float _startOffset;
+		private readonly float _endOffset;
+		private readonly float _gap;
+		
 		#region INIT
 
-		public VerticalRecyclingSystem(RectTransform prototypeCell, RectTransform viewport, RectTransform content,
-			IRecyclableScrollRectDataSource dataSource, bool isGrid, int columns)
+		public VerticalRecyclingSystem(
+			RectTransform prototypeCell,
+			RectTransform viewport,
+			RectTransform content,
+			IRecyclableScrollRectDataSource dataSource, 
+			bool isGrid,
+			int columns,
+			float startOffset,
+			float endOffset,
+			float gap
+		)
 		{
 			PrototypeCell = prototypeCell;
 			Viewport = viewport;
@@ -53,6 +65,9 @@ namespace PolyAndCode.UI
 			DataSource = dataSource;
 			IsGrid = isGrid;
 			_coloumns = isGrid ? columns : 1;
+			_startOffset = Mathf.Max(0f, startOffset);
+			_endOffset = Mathf.Max(0f, endOffset);
+			_gap = Mathf.Max(0f, gap);
 			_recyclableViewBounds = new Bounds();
 		}
 		
@@ -83,12 +98,14 @@ namespace PolyAndCode.UI
 			//Set content height according to no of rows
 			int noOfRows = (int)Mathf.Ceil((float)_cellPool.Count / (float)_coloumns);
 			
-			float contentYSize = 0f;
+			float contentYSize = _startOffset + _endOffset;
 			
 			for (int i = 0; i < noOfRows; i++)
 			{
 				contentYSize += DataSource.GetHeight(i);
 			}
+			
+			contentYSize += (noOfRows - 1) * _gap;
 			
 			Content.sizeDelta = new Vector2(Content.sizeDelta.x, contentYSize);
 			SetTopAnchor(Content);
@@ -144,7 +161,7 @@ namespace PolyAndCode.UI
 			float currentPoolCoverage = 0;
 			int poolSize = 0;
 			float posX = 0;
-			float posY = 0;
+			float posY = -_startOffset;
 
 			//set new cell size according to its aspect ratio
 			_cellWidth = Content.rect.width / _coloumns;
@@ -173,14 +190,14 @@ namespace PolyAndCode.UI
 					if (++_bottomMostCellColumn >= _coloumns)
 					{
 						_bottomMostCellColumn = 0;
-						posY -= cellHeight;
+						posY -= cellHeight - _gap;
 						currentPoolCoverage += item.rect.height;
 					}
 				}
 				else
 				{
 					item.anchoredPosition = new Vector2(0, posY);
-					posY = item.anchoredPosition.y - item.rect.height;
+					posY = item.anchoredPosition.y - item.rect.height - _gap;
 					currentPoolCoverage += item.rect.height;
 				}
 
@@ -248,7 +265,7 @@ namespace PolyAndCode.UI
 				var bottom = _cellPool[_bottomMostCellIndex];
 
 				// amount leaving the top of the window
-				float offHeight = top.sizeDelta.y;
+				float offHeight = top.sizeDelta.y + _gap;
 				_virtualTop += offHeight;          // << key: virtual scroll advanced
 				moveOffset += offHeight;           // compensate to keep visuals stable
 
@@ -260,7 +277,7 @@ namespace PolyAndCode.UI
 				top.sizeDelta = new Vector2(top.sizeDelta.x, newHeight);
 
 				// place below the current bottom
-				float posY = bottom.anchoredPosition.y - bottom.sizeDelta.y;
+				float posY = bottom.anchoredPosition.y - bottom.sizeDelta.y - _gap;
 				top.anchoredPosition = new Vector2(top.anchoredPosition.x, posY);
 
 				// rotate indices
@@ -305,11 +322,12 @@ namespace PolyAndCode.UI
 				bottom.sizeDelta = new Vector2(bottom.sizeDelta.x, newHeight);
 
 				// this much appears at the top of the window
-				_virtualTop -= newHeight;          // << key: virtual scroll moved up
-				moveOffset += newHeight;
+				float inHeight = newHeight + _gap;
+				_virtualTop -= inHeight;
+				moveOffset  += inHeight;
 
 				// place just above current top
-				float posY = top.anchoredPosition.y + newHeight;
+				float posY = top.anchoredPosition.y + inHeight;
 				bottom.anchoredPosition = new Vector2(bottom.anchoredPosition.x, posY);
 
 				// rotate indices
@@ -331,12 +349,22 @@ namespace PolyAndCode.UI
 		
 		private float RecalculateWindowHeight()
 		{
-			float h = 0f;
+			if (_cellPool == null || _cellPool.Count == 0)
+				return _startOffset + _endOffset;
+			
+			float height = 0f;
 			foreach (RectTransform cell in _cellPool)
 			{
-				h += cell.sizeDelta.y;
+				height += cell.sizeDelta.y;
 			}
-			return h;
+
+			float gaps = 0f;
+			if (_cellPool.Count > 1)
+			{
+				gaps += (_cellPool.Count - 1) * _gap;
+			}
+			
+			return height + gaps + _startOffset + _endOffset;;
 		}
 
 		#endregion

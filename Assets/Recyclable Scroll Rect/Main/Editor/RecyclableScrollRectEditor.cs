@@ -31,6 +31,9 @@ namespace PolyAndCode.UI
         SerializedProperty _selfInitialize;
         SerializedProperty _direction;
         SerializedProperty _type;
+        SerializedProperty _gap;
+        SerializedProperty _startOffset;
+        SerializedProperty _endOffset;
 
         AnimBool m_ShowElasticity;
         AnimBool m_ShowDecelerationRate;
@@ -50,10 +53,13 @@ namespace PolyAndCode.UI
             m_OnValueChanged = serializedObject.FindProperty("m_OnValueChanged");
 
             //Inherited
-            _protoTypeCell = serializedObject.FindProperty("PrototypeCell");
-            _selfInitialize = serializedObject.FindProperty("SelfInitialize");
-            _direction = serializedObject.FindProperty("Direction");
-            _type = serializedObject.FindProperty("IsGrid");
+            _protoTypeCell = serializedObject.FindProperty("prototypeCell");
+            _selfInitialize = serializedObject.FindProperty("selfInitialize");
+            _direction = serializedObject.FindProperty("direction");
+            _type = serializedObject.FindProperty("isGrid");
+            _gap = serializedObject.FindProperty("gap");
+            _startOffset = serializedObject.FindProperty("startOffset");
+            _endOffset = serializedObject.FindProperty("endOffset");
 
             m_ShowElasticity = new AnimBool(Repaint);
             m_ShowDecelerationRate = new AnimBool(Repaint);
@@ -84,12 +90,21 @@ namespace PolyAndCode.UI
         {
             SetAnimBools(false); 
             serializedObject.Update();
+            
+            EditorGUILayout.LabelField("Offset", EditorStyles.boldLabel);
+            EditorGUI.indentLevel++;
+            EditorGUILayout.PropertyField(_startOffset, new GUIContent("Start"));
+            EditorGUILayout.PropertyField(_endOffset, new GUIContent("End"));
+            EditorGUI.indentLevel--;
           
+            EditorGUILayout.Space();
+            EditorGUILayout.PropertyField(_gap, new GUIContent("Gap"));
+            
             EditorGUILayout.PropertyField(_direction);
             EditorGUILayout.PropertyField(_type, new GUIContent("Grid"));
             if (_type.boolValue)
             {
-                string title = _direction.enumValueIndex == (int)RecyclableScrollRect.DirectionType.Vertical ? "Coloumns" : "Rows";
+                string title = _direction.enumValueIndex == (int)RecyclableScrollRect.DirectionType.Vertical ? "Columns" : "Rows";
                _script.Segments =  EditorGUILayout.IntField(title, _script.Segments);
             }
 

@@ -38,11 +38,24 @@ namespace PolyAndCode.UI
         //Cached zero vector 
         private Vector2 zeroVector = Vector2.zero;
         
-        private float _virtualLeft;
+        private float _virtualLeft; //in case we'll need scroll bar
+        private readonly float _startOffset;
+        private readonly float _endOffset;
+        private readonly float _gap;
         
         
         #region INIT
-        public HorizontalRecyclingSystem(RectTransform prototypeCell, RectTransform viewport, RectTransform content, IRecyclableScrollRectDataSource dataSource, bool isGrid, int rows)
+        public HorizontalRecyclingSystem(
+            RectTransform prototypeCell,
+            RectTransform viewport,
+            RectTransform content,
+            IRecyclableScrollRectDataSource dataSource,
+            bool isGrid,
+            int rows,
+            float startOffset,
+            float endOffset,
+            float gap
+            )
         {
             PrototypeCell = prototypeCell;
             Viewport = viewport;
@@ -50,6 +63,9 @@ namespace PolyAndCode.UI
             DataSource = dataSource;
             IsGrid = isGrid;
             _rows = isGrid ? rows : 1;
+            _startOffset = Mathf.Max(0f, startOffset);
+            _endOffset = Mathf.Max(0f, endOffset);
+            _gap = Mathf.Max(0f, gap);
             _recyclableViewBounds = new Bounds();
         }
 
@@ -82,15 +98,16 @@ namespace PolyAndCode.UI
             rightMostCellIndex = _cellPool.Count - 1;
 
             //Set content width according to no of coloums
-            int coloums = Mathf.CeilToInt((float)_cellPool.Count / _rows);
+            int columns = Mathf.CeilToInt((float)_cellPool.Count / _rows);
 
-            float contentXSize = 0f;//coloums * _cellWidth;
+            float contentXSize = _startOffset + _endOffset;
             
-            
-            for (int i = 0; i < coloums; i++)
+            for (int i = 0; i < columns; i++)
             {
                 contentXSize += DataSource.GetWidth(i);
             }
+            
+            contentXSize += (columns - 1) * _gap;
             
             Content.sizeDelta = new Vector2(contentXSize, Content.sizeDelta.y);
             SetLeftAnchor(Content);
@@ -141,7 +158,7 @@ namespace PolyAndCode.UI
             //Temps
             float currentPoolCoverage = 0;
             int poolSize = 0;
-            float posX = 0;
+            float posX = _startOffset;
             float posY = 0;
 
             //Get the required pool coverage and mininum size for the Cell pool
@@ -166,14 +183,14 @@ namespace PolyAndCode.UI
                     if (++_RightMostCellRow >= _rows)
                     {
                         _RightMostCellRow = 0;
-                        posX += _cellWidth;
+                        posX += _cellWidth + _gap;
                         currentPoolCoverage += item.rect.width;
                     }
                 }
                 else
                 {
                     item.anchoredPosition = new Vector2(posX, 0);
-                    posX = item.anchoredPosition.x + item.rect.width;
+                    posX = item.anchoredPosition.x + item.rect.width + _gap;
                     currentPoolCoverage += item.rect.width;
                 }
 
@@ -239,7 +256,7 @@ namespace PolyAndCode.UI
                 RectTransform right = _cellPool[rightMostCellIndex];
 
                 // how much leaves the window on the left
-                float offWidth = left.sizeDelta.x;
+                float offWidth = left.sizeDelta.x + _gap;
                 _virtualLeft += offWidth;     // virtual scroll progressed right
                 moveOffset   += offWidth;     // compensate to keep visuals stable
 
@@ -254,7 +271,7 @@ namespace PolyAndCode.UI
                 // left.sizeDelta = new Vector2(ComputeWidthFor(newDataIndex), left.sizeDelta.y);
 
                 // place just to the right of current right-most
-                float posX = right.anchoredPosition.x + right.sizeDelta.x;
+                float posX = right.anchoredPosition.x + right.sizeDelta.x + _gap;
                 left.anchoredPosition = new Vector2(posX, left.anchoredPosition.y);
 
                 // rotate indices
@@ -306,12 +323,12 @@ namespace PolyAndCode.UI
                 // right.sizeDelta = new Vector2(ComputeWidthFor(newDataIndex), right.sizeDelta.y);
 
                 // this much appears on the left of the window
-                float inWidth = right.sizeDelta.x;
+                float inWidth = right.sizeDelta.x + _gap;
                 _virtualLeft -= inWidth;      // virtual scroll moved left
                 moveOffset   += inWidth;
 
                 // place just to the LEFT of current left-most
-                float posX = left.anchoredPosition.x - right.sizeDelta.x;
+                float posX = left.anchoredPosition.x - (right.sizeDelta.x + _gap);
                 right.anchoredPosition = new Vector2(posX, right.anchoredPosition.y);
 
                 // rotate indices
@@ -334,13 +351,22 @@ namespace PolyAndCode.UI
         
         private float RecalculateWindowWidth()
         {
-            float w = 0f;
+            if (_cellPool == null || _cellPool.Count == 0)
+                return _startOffset + _endOffset;
+            
+            float width = 0f;
             foreach (RectTransform t in _cellPool)
             {
-                w += t.sizeDelta.x;
+                width += t.sizeDelta.x;
+            }
+            
+            float gaps = 0f;
+            if (_cellPool.Count > 1)
+            {
+                gaps += (_cellPool.Count - 1) * _gap;
             }
 
-            return w;
+            return width + gaps + _startOffset + _endOffset;
         }
         
         #endregion
