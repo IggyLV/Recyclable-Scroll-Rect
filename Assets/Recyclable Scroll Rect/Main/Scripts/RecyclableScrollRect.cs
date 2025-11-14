@@ -3,6 +3,7 @@
 //Website : Polyandcode.com 
 
 using System;
+using Recyclable_Scroll_Rect.Main.Scripts.Recycling_System;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -24,9 +25,6 @@ namespace PolyAndCode.UI
 
 		[SerializeField]
 		private float gap = 0f;
-
-		[SerializeField]
-		private bool isGrid;
 
 		//Prototype cell can either be a prefab or present as a child to the content(will automatically be disabled in runtime)
 		[SerializeField]
@@ -76,34 +74,24 @@ namespace PolyAndCode.UI
 		/// </summary>
 		private void Initialize()
 		{
+			RecyclingSystemRequest request = new (
+				prototypeCell,
+				viewport,
+				content,
+				DataSource,
+				startOffset,
+				endOffset,
+				gap
+			);
+
 			//Contruct the recycling system.
 			if (direction == DirectionType.Vertical)
 			{
-				_recyclingSystem = new VerticalRecyclingSystem(
-					prototypeCell,
-					viewport,
-					content,
-					DataSource,
-					isGrid,
-					Segments,
-					startOffset,
-					endOffset,
-					gap
-				);
+				_recyclingSystem = new VerticalRecyclingSystem(request);
 			}
 			else if (direction == DirectionType.Horizontal)
 			{
-				_recyclingSystem = new HorizontalRecyclingSystem(
-					prototypeCell,
-					viewport,
-					content,
-					DataSource,
-					isGrid,
-					Segments,
-					startOffset,
-					endOffset,
-					gap
-				);
+				_recyclingSystem = new HorizontalRecyclingSystem(request);
 			}
 
 			vertical = direction == DirectionType.Vertical;

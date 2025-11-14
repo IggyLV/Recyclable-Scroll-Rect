@@ -30,7 +30,6 @@ namespace PolyAndCode.UI
         SerializedProperty _protoTypeCell;
         SerializedProperty _selfInitialize;
         SerializedProperty _direction;
-        SerializedProperty _type;
         SerializedProperty _gap;
         SerializedProperty _startOffset;
         SerializedProperty _endOffset;
@@ -56,7 +55,6 @@ namespace PolyAndCode.UI
             _protoTypeCell = serializedObject.FindProperty("prototypeCell");
             _selfInitialize = serializedObject.FindProperty("selfInitialize");
             _direction = serializedObject.FindProperty("direction");
-            _type = serializedObject.FindProperty("isGrid");
             _gap = serializedObject.FindProperty("gap");
             _startOffset = serializedObject.FindProperty("startOffset");
             _endOffset = serializedObject.FindProperty("endOffset");
@@ -101,12 +99,6 @@ namespace PolyAndCode.UI
             EditorGUILayout.PropertyField(_gap, new GUIContent("Gap"));
             
             EditorGUILayout.PropertyField(_direction);
-            EditorGUILayout.PropertyField(_type, new GUIContent("Grid"));
-            if (_type.boolValue)
-            {
-                string title = _direction.enumValueIndex == (int)RecyclableScrollRect.DirectionType.Vertical ? "Columns" : "Rows";
-               _script.Segments =  EditorGUILayout.IntField(title, _script.Segments);
-            }
 
             EditorGUILayout.PropertyField(_selfInitialize);
             EditorGUILayout.PropertyField(m_Viewport);

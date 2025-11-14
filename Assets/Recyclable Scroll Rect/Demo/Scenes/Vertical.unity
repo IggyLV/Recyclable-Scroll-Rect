@@ -650,7 +650,7 @@ MonoBehaviour:
       m_Calls: []
   startOffset: 10
   endOffset: 5
-  gap: 10
+  gap: 5
   isGrid: 0
   prototypeCell: {fileID: 224916794551575436, guid: 025a38a9b0fc10149a126dcbd8a829e3,
     type: 3}

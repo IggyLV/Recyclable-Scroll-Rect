@@ -5,6 +5,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Recyclable_Scroll_Rect.Main.Scripts.Interfaces;
 using UnityEngine;
 
 namespace PolyAndCode.UI
@@ -45,27 +46,16 @@ namespace PolyAndCode.UI
         
         
         #region INIT
-        public HorizontalRecyclingSystem(
-            RectTransform prototypeCell,
-            RectTransform viewport,
-            RectTransform content,
-            IRecyclableScrollRectDataSource dataSource,
-            bool isGrid,
-            int rows,
-            float startOffset,
-            float endOffset,
-            float gap
-            )
+        public HorizontalRecyclingSystem(IRecyclingSystemRequest request)
         {
-            PrototypeCell = prototypeCell;
-            Viewport = viewport;
-            Content = content;
-            DataSource = dataSource;
-            IsGrid = isGrid;
-            _rows = isGrid ? rows : 1;
-            _startOffset = Mathf.Max(0f, startOffset);
-            _endOffset = Mathf.Max(0f, endOffset);
-            _gap = Mathf.Max(0f, gap);
+            PrototypeCell = request.PrototypeCell;
+            Viewport = request.Viewport;
+            Content = request.Content;
+            DataSource = request.DataSource;
+            _rows = 1;
+            _startOffset = Mathf.Max(0f, request.StartOffset);
+            _endOffset = Mathf.Max(0f, request.EndOffset);
+            _gap = Mathf.Max(0f, request.Gap);
             _recyclableViewBounds = new Bounds();
         }
 
@@ -176,23 +166,9 @@ namespace PolyAndCode.UI
                 _cellPool.Add(item);
                 item.SetParent(Content, false);
 
-                if (IsGrid)
-                {
-                    posY = -_RightMostCellRow * _cellHeight;
-                    item.anchoredPosition = new Vector2(posX, posY);
-                    if (++_RightMostCellRow >= _rows)
-                    {
-                        _RightMostCellRow = 0;
-                        posX += _cellWidth + _gap;
-                        currentPoolCoverage += item.rect.width;
-                    }
-                }
-                else
-                {
-                    item.anchoredPosition = new Vector2(posX, 0);
-                    posX = item.anchoredPosition.x + item.rect.width + _gap;
-                    currentPoolCoverage += item.rect.width;
-                }
+                item.anchoredPosition = new Vector2(posX, 0);
+                posX = item.anchoredPosition.x + item.rect.width + _gap;
+                currentPoolCoverage += item.rect.width;
 
                 //Setting data for Cell
                 _cachedCells.Add(item.GetComponent<ICell>());
@@ -200,11 +176,6 @@ namespace PolyAndCode.UI
 
                 //Update the Pool size
                 poolSize++;
-            }
-
-            if (IsGrid)
-            {
-                _RightMostCellRow = (_RightMostCellRow - 1 + _rows) % _rows;
             }
 
             //Deactivate prototype cell if it is not a prefab(i.e it's present in scene)
@@ -382,7 +353,7 @@ namespace PolyAndCode.UI
             float width = rectTransform.rect.width;
             float height = rectTransform.rect.height;
 
-            Vector2 pos = IsGrid ? new Vector2(0, 1) : new Vector2(0, 0.5f);
+            Vector2 pos = new (0, 0.5f);
 
             //Setting top anchor 
             rectTransform.anchorMin = pos;

@@ -5,6 +5,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Recyclable_Scroll_Rect.Main.Scripts.Interfaces;
 using UnityEngine;
 
 namespace PolyAndCode.UI
@@ -47,27 +48,16 @@ namespace PolyAndCode.UI
 		
 		#region INIT
 
-		public VerticalRecyclingSystem(
-			RectTransform prototypeCell,
-			RectTransform viewport,
-			RectTransform content,
-			IRecyclableScrollRectDataSource dataSource, 
-			bool isGrid,
-			int columns,
-			float startOffset,
-			float endOffset,
-			float gap
-		)
+		public VerticalRecyclingSystem(IRecyclingSystemRequest request)
 		{
-			PrototypeCell = prototypeCell;
-			Viewport = viewport;
-			Content = content;
-			DataSource = dataSource;
-			IsGrid = isGrid;
-			_coloumns = isGrid ? columns : 1;
-			_startOffset = Mathf.Max(0f, startOffset);
-			_endOffset = Mathf.Max(0f, endOffset);
-			_gap = Mathf.Max(0f, gap);
+			PrototypeCell = request.PrototypeCell;
+			Viewport = request.Viewport;
+			Content = request.Content;
+			DataSource = request.DataSource;
+			_coloumns = 1;
+			_startOffset = Mathf.Max(0f, request.StartOffset);
+			_endOffset = Mathf.Max(0f, request.EndOffset);
+			_gap = Mathf.Max(0f, request.Gap);
 			_recyclableViewBounds = new Bounds();
 		}
 		
@@ -145,14 +135,7 @@ namespace PolyAndCode.UI
 
 			//Set the prototype cell active and set cell anchor as top 
 			PrototypeCell.gameObject.SetActive(true);
-			if (IsGrid)
-			{
-				SetTopLeftAnchor(PrototypeCell);
-			}
-			else
-			{
-				SetTopAnchor(PrototypeCell);
-			}
+			SetTopAnchor(PrototypeCell);
 
 			//Reset
 			_topMostCellColumn = _bottomMostCellColumn = 0;
@@ -183,23 +166,9 @@ namespace PolyAndCode.UI
 				_cellPool.Add(item);
 				item.SetParent(Content, false);
 
-				if (IsGrid)
-				{
-					posX = _bottomMostCellColumn * _cellWidth;
-					item.anchoredPosition = new Vector2(posX, posY);
-					if (++_bottomMostCellColumn >= _coloumns)
-					{
-						_bottomMostCellColumn = 0;
-						posY -= cellHeight - _gap;
-						currentPoolCoverage += item.rect.height;
-					}
-				}
-				else
-				{
-					item.anchoredPosition = new Vector2(0, posY);
-					posY = item.anchoredPosition.y - item.rect.height - _gap;
-					currentPoolCoverage += item.rect.height;
-				}
+				item.anchoredPosition = new Vector2(0, posY);
+				posY = item.anchoredPosition.y - item.rect.height - _gap;
+				currentPoolCoverage += item.rect.height;
 
 				//Setting data for Cell
 				_cachedCells.Add(item.GetComponent<ICell>());
@@ -207,12 +176,6 @@ namespace PolyAndCode.UI
 				
 				//Update the Pool size
 				poolSize++;
-			}
-
-			//TODO : you alrady have a _currentColoumn varaiable. Why this calculation?????
-			if (IsGrid)
-			{
-				_bottomMostCellColumn = (_bottomMostCellColumn - 1 + _coloumns) % _coloumns;
 			}
 
 			//Deactivate prototype cell if it is not a prefab(i.e. it's present in scene)
