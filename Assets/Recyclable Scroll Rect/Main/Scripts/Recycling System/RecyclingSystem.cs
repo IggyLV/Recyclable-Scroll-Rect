@@ -16,7 +16,6 @@ namespace PolyAndCode.UI
 
         protected RectTransform Viewport, Content;
         protected RectTransform PrototypeCell;
-        protected bool IsGrid;
 
         protected float MinPoolCoverage = 1.5f; // The recyclable pool must cover (viewPort * _poolCoverage) area.
         protected int MinPoolSize = 10; // Cell pool must have a min size

@@ -12,10 +12,17 @@ public class DemoCell : MonoBehaviour, ICell
     public Text nameLabel;
     public Text genderLabel;
     public Text idLabel;
+    public Text heightLabel;
 
     //Model
     private ContactInfo _contactInfo;
     private int _cellIndex;
+
+    public int CellIndex
+    {
+        get => _cellIndex;
+        private set => _cellIndex = value;
+    }
 
     private void Start()
     {
@@ -24,19 +31,23 @@ public class DemoCell : MonoBehaviour, ICell
     }
 
     //This is called from the SetCell method in DataSource
-    public void ConfigureCell(ContactInfo contactInfo,int cellIndex)
+    public void ConfigureCell(ContactInfo contactInfo, int cellIndex)
     {
-        _cellIndex = cellIndex;
+        CellIndex = cellIndex;
         _contactInfo = contactInfo;
 
         nameLabel.text = contactInfo.Name;
         genderLabel.text = contactInfo.Gender;
         idLabel.text = contactInfo.id;
+        heightLabel.text = $"{contactInfo.height}px";
+
+        Vector2 sizeDelta = ((RectTransform)transform).sizeDelta;
+        ((RectTransform)transform).sizeDelta = new Vector2(contactInfo.width, contactInfo.height);
     }
 
     
     private void ButtonListener()
     {
-        Debug.Log("Index : " + _cellIndex +  ", Name : " + _contactInfo.Name  + ", Gender : " + _contactInfo.Gender);
+        Debug.Log("Index : " + CellIndex +  ", Name : " + _contactInfo.Name  + ", Gender : " + _contactInfo.Gender);
     }
 }

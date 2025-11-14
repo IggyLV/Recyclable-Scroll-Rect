@@ -8,15 +8,7 @@ using PolyAndCode.UI;
 /// The only requirement is to inherit from IRecyclableScrollRectDataSource and implement the interface methods
 /// </summary>
 
-//Dummy Data model for demostraion
-public struct ContactInfo
-{
-    public string Name;
-    public string Gender;
-    public string id;
-}
-
-public class RecyclableScrollerDemo : MonoBehaviour, IRecyclableScrollRectDataSource
+public class HorizontalRecyclableScrollerDemo : MonoBehaviour, IRecyclableScrollRectDataSource
 {
     [SerializeField]
     RecyclableScrollRect _recyclableScrollRect;
@@ -46,6 +38,8 @@ public class RecyclableScrollerDemo : MonoBehaviour, IRecyclableScrollRectDataSo
             obj.Name = i + "_Name";
             obj.Gender = genders[Random.Range(0, 2)];
             obj.id = "item : " + i;
+            obj.height = 230f;
+            obj.width = Random.Range(50f, 300f);
             _contactList.Add(obj);
         }
     }
@@ -69,6 +63,26 @@ public class RecyclableScrollerDemo : MonoBehaviour, IRecyclableScrollRectDataSo
         //Casting to the implemented Cell
         var item = cell as DemoCell;
         item.ConfigureCell(_contactList[index], index);
+    }
+
+    public float GetHeight(int index)
+    {
+        if (index >= _contactList.Count)
+        {
+            return 0f;
+        }
+        
+        return _contactList[index].height;
+    }
+    
+    public float GetWidth(int index)
+    {
+        if (index >= _contactList.Count)
+        {
+            return 0f;
+        }
+        
+        return _contactList[index].width;
     }
 
     #endregion
